@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logo上传测试 - HKTCWAC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+    <script src="script.js"></script>
+    <script src="fix-all.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">Logo上传测试</h1>
+        
+        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
+            <!-- Logo预览 -->
+            <div class="p-6 border-b text-center">
+                <h2 class="text-xl font-semibold mb-4">当前Logo预览</h2>
+                <div class="flex justify-center items-center space-x-4">
+                    <div class="relative">
+                        <img id="test-logo-image" src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/97555580-13a0-4421-932a-4c653a157645~tplv-a9rns2rl98-image.image?rcl=2026020915252401000000000199530&rk3s=8e244e97&rrcfp=f06b921b&x-expires=1791294522&x-signature=kDnJ58aWp78vD%2FbV9%2F9H0dRxj6o%3D" alt="HKTCWAC Logo" class="h-20 w-20 object-contain border-2 border-gray-200 rounded-lg p-2">
+                        <button id="test-logo-upload-btn" class="absolute -bottom-2 -right-2 bg-primary text-white rounded-full w-8 h-8 text-sm flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity" onclick="document.getElementById('test-logo-upload').click()">
+                            <i data-lucide="upload" class="w-4 h-4"></i>
+                        </button>
+                        <input type="file" id="test-logo-upload" accept="image/*" class="hidden" onchange="testHandleLogoUpload(event)">
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 mt-2">鼠标悬停在Logo上查看上传按钮（需要管理员权限）</p>
+            </div>
+            
+            <!-- 测试控制 -->
+            <div class="p-6 border-b">
+                <h2 class="text-xl font-semibold mb-4">测试控制</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button onclick="testAdminLogin()" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+                        模拟管理员登录
+                    </button>
+                    <button onclick="testAdminLogout()" class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
+                        模拟管理员登出
+                    </button>
+                    <button onclick="clearCustomLogo()" class="bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors">
+                        清除自定义Logo
+                    </button>
+                    <button onclick="refreshPage()" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                        刷新页面
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 状态信息 -->
+            <div class="p-6 bg-gray-50">
+                <h3 class="font-semibold mb-2">当前状态</h3>
+                <div class="space-y-1 text-sm">
+                    <p><strong>管理员登录状态:</strong> <span id="login-status">未登录</span></p>
+                    <p><strong>自定义Logo存在:</strong> <span id="logo-exists">否</span></p>
+                    <p><strong>上传按钮可见性:</strong> <span id="button-visibility">隐藏</span></p>
+                    <p><strong>localStorage Logo大小:</strong> <span id="logo-size">-</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 测试用的Logo上传处理
+        function testHandleLogoUpload(event) {
+            console.log('测试Logo上传处理函数被调用');
+            
+            // 检查管理员权限
+            if (!checkAdminLogin()) {
+                showNotification('请先登录管理员账户', 'error');
+                return;
+            }
+            
+            const file = event.target.files[0];
+            if (!file) {
+                console.log('没有选择文件');
+                return;
+            }
+            
+            console.log('选择的文件:', file.name, file.type, file.size);
+            
+            // 检查文件类型
+            if (!file.type.startsWith('image/')) {
+                showNotification('请选择图片文件', 'error');
+                return;
+            }
+            
+            // 检查文件大小（限制为2MB）
+            const maxSize = 2 * 1024 * 1024; // 2MB
+            if (file.size > maxSize) {
+                showNotification('图片大小不能超过2MB', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                console.log('文件读取完成，更新Logo');
+                
+                // 更新测试Logo图片
+                const logoImage = document.getElementById('test-logo-image');
+                if (logoImage) {
+                    logoImage.src = e.target.result;
+                    console.log('测试Logo图片已更新');
+                }
+                
+                // 更新主页面Logo
+                const mainLogoImage = document.getElementById('logo-image');
+                if (mainLogoImage) {
+                    mainLogoImage.src = e.target.result;
+                    console.log('主页面Logo图片已更新');
+                }
+                
+                // 保存到localStorage（Base64格式）
+                try {
+                    localStorage.setItem('customLogo', e.target.result);
+                    console.log('Logo已保存到localStorage');
+                    showNotification('Logo上传成功！', 'success');
+                    updateTestStatus();
+                } catch (error) {
+                    console.error('保存Logo失败:', error);
+                    showNotification('Logo保存失败，请重试', 'error');
+                }
+            };
+            
+            reader.onerror = function() {
+                console.error('文件读取失败');
+                showNotification('图片读取失败，请重试', 'error');
+            };
+            
+            console.log('开始读取文件...');
+            reader.readAsDataURL(file);
+        }
+        
+        // 模拟管理员登录
+        function testAdminLogin() {
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('adminUsername', 'admin');
+            updateTestStatus();
+            showNotification('已模拟管理员登录', 'success');
+        }
+        
+        // 模拟管理员登出
+        function testAdminLogout() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('adminUsername');
+            updateTestStatus();
+            showNotification('已模拟管理员登出', 'success');
+        }
+        
+        // 清除自定义Logo
+        function clearCustomLogo() {
+            localStorage.removeItem('customLogo');
+            const logoImage = document.getElementById('test-logo-image');
+            if (logoImage) {
+                logoImage.src = "https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/97555580-13a0-4421-932a-4c653a157645~tplv-a9rns2rl98-image.image?rcl=2026020915252401000000000199530&rk3s=8e244e97&rrcfp=f06b921b&x-expires=1791294522&x-signature=kDnJ58aWp78vD%2FbV9%2F9H0dRxj6o%3D";
+            }
+            updateTestStatus();
+            showNotification('已清除自定义Logo', 'success');
+        }
+        
+        // 刷新页面
+        function refreshPage() {
+            window.location.reload();
+        }
+        
+        // 更新测试状态
+        function updateTestStatus() {
+            const isLoggedIn = checkAdminLogin();
+            const customLogo = localStorage.getItem('customLogo');
+            const loginStatus = document.getElementById('login-status');
+            const logoExists = document.getElementById('logo-exists');
+            const buttonVisibility = document.getElementById('button-visibility');
+            const logoSize = document.getElementById('logo-size');
+            
+            loginStatus.textContent = isLoggedIn ? '已登录' : '未登录';
+            logoExists.textContent = customLogo ? '是' : '否';
+            
+            const uploadBtn = document.getElementById('test-logo-upload-btn');
+            if (uploadBtn) {
+                uploadBtn.style.opacity = isLoggedIn ? '0.7' : '0';
+                buttonVisibility.textContent = isLoggedIn ? '显示' : '隐藏';
+            }
+            
+            logoSize.textContent = customLogo ? (customLogo.length / 1024).toFixed(2) + ' KB' : '-';
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Logo测试页面加载完成');
+            
+            // 检查自定义Logo
+            const customLogo = localStorage.getItem('customLogo');
+            const logoImage = document.getElementById('test-logo-image');
+            if (customLogo && logoImage) {
+                logoImage.src = customLogo;
+            }
+            
+            // 更新状态
+            updateTestStatus();
+            
+            // 设置上传按钮事件
+            const uploadBtn = document.getElementById('test-logo-upload-btn');
+            if (uploadBtn) {
+                uploadBtn.addEventListener('mouseenter', function() {
+                    if (checkAdminLogin()) {
+                        this.style.opacity = '1';
+                    }
+                });
+                
+                uploadBtn.addEventListener('mouseleave', function() {
+                    if (checkAdminLogin()) {
+                        this.style.opacity = '0.7';
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

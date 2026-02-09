@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HKTCWAC 调试工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+    <style>
+        .debug-section {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .log-entry {
+            padding: 0.5rem;
+            border-bottom: 1px solid #f3f4f6;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875rem;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .log-info { color: #3b82f6; }
+        .log-success { color: #10b981; }
+        .log-error { color: #ef4444; }
+        .log-warning { color: #f59e0b; }
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .status-good {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        
+        .status-bad {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .status-warning {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">HKTCWAC 调试工具</h1>
+        
+        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
+            <!-- 系统状态 -->
+            <div class="bg-gray-50 p-6 border-b">
+                <h2 class="text-xl font-semibold mb-4">系统状态</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <p><strong>语言设置:</strong> <span id="current-language">检测中...</span></p>
+                        <p><strong>登录状态:</strong> <span id="login-status">检测中...</span></p>
+                        <p><strong>管理员用户名:</strong> <span id="admin-username">检测中...</span></p>
+                    </div>
+                    <div>
+                        <p><strong>localStorage 项目数:</strong> <span id="localstorage-count">检测中...</span></p>
+                        <p><strong>DOM 加载状态:</strong> <span id="dom-status">检测中...</span></p>
+                        <p><strong>Lucide 图标库:</strong> <span id="lucide-status">检测中...</span></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 功能测试 -->
+            <div class="p-6 border-b">
+                <h2 class="text-xl font-semibold mb-4">功能测试</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button onclick="testLanguageToggle()" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                        测试语言切换
+                    </button>
+                    <button onclick="testPermissionStatus()" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+                        测试权限状态
+                    </button>
+                    <button onclick="testAdminLogin()" class="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">
+                        模拟管理员登录
+                    </button>
+                    <button onclick="testAdminLogout()" class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
+                        模拟管理员登出
+                    </button>
+                    <button onclick="clearAllData()" class="bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors">
+                        清除所有数据
+                    </button>
+                    <button onclick="refreshPage()" class="bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 transition-colors">
+                        刷新页面
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 调试日志 -->
+            <div class="p-6">
+                <h2 class="text-xl font-semibold mb-4">调试日志</h2>
+                <div id="debug-log" class="max-h-60 overflow-y-auto bg-gray-50 rounded-lg">
+                    <div class="log-entry log-info">调试工具已加载</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- localStorage 内容 -->
+        <div class="max-w-4xl mx-auto mt-8 bg-white rounded-lg shadow-lg overflow-hidden">
+            <div class="p-6">
+                <h2 class="text-xl font-semibold mb-4">LocalStorage 内容</h2>
+                <div id="localstorage-content" class="space-y-2">
+                    <p class="text-gray-500">加载中...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局日志函数
+        window.debugLog = function(message, type = 'info') {
+            const logContainer = document.getElementById('debug-log');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            console.log(`[HKTCWAC] ${message}`);
+        };
+        
+        // 更新系统状态
+        function updateSystemStatus() {
+            debugLog('更新系统状态...');
+            
+            // 语言设置
+            const currentLang = document.documentElement.lang;
+            document.getElementById('current-language').textContent = currentLang;
+            
+            // 登录状态
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            const loginStatusElement = document.getElementById('login-status');
+            loginStatusElement.innerHTML = `<span class="status-badge ${isLoggedIn ? 'status-good' : 'status-bad'}">${isLoggedIn ? '已登录' : '未登录'}</span>`;
+            
+            // 管理员用户名
+            const username = localStorage.getItem('adminUsername');
+            document.getElementById('admin-username').textContent = username || '无';
+            
+            // localStorage 项目数
+            document.getElementById('localstorage-count').textContent = Object.keys(localStorage).length;
+            
+            // DOM 加载状态
+            document.getElementById('dom-status').textContent = document.readyState;
+            
+            // Lucide 状态
+            const lucideStatus = typeof lucide !== 'undefined';
+            const lucideStatusElement = document.getElementById('lucide-status');
+            lucideStatusElement.innerHTML = `<span class="status-badge ${lucideStatus ? 'status-good' : 'status-bad'}">${lucideStatus ? '已加载' : '未加载'}</span>`;
+            
+            // 更新 localStorage 内容
+            updateLocalStorageContent();
+            
+            debugLog('系统状态更新完成');
+        }
+        
+        // 更新 localStorage 内容显示
+        function updateLocalStorageContent() {
+            const container = document.getElementById('localstorage-content');
+            container.innerHTML = '';
+            
+            const keys = Object.keys(localStorage);
+            if (keys.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">LocalStorage 为空</p>';
+                return;
+            }
+            
+            keys.forEach(key => {
+                const value = localStorage.getItem(key);
+                const item = document.createElement('div');
+                item.className = 'p-3 bg-gray-50 rounded-lg';
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <strong class="text-blue-600">${key}</strong>
+                        <button onclick="deleteLocalStorageItem('${key}')" class="text-red-500 hover:text-red-700 text-sm">删除</button>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-1">${value}</div>
+                `;
+                container.appendChild(item);
+            });
+        }
+        
+        // 删除 localStorage 项目
+        function deleteLocalStorageItem(key) {
+            debugLog(`删除 localStorage 项目: ${key}`, 'warning');
+            localStorage.removeItem(key);
+            updateSystemStatus();
+        }
+        
+        // 测试语言切换
+        function testLanguageToggle() {
+            debugLog('测试语言切换功能...');
+            
+            if (typeof setupLanguageToggle === 'function') {
+                setupLanguageToggle();
+                debugLog('语言切换功能测试成功', 'success');
+                
+                // 切换语言
+                const currentLang = document.documentElement.lang;
+                const newLang = currentLang === 'zh' ? 'en' : 'zh';
+                setLanguage(newLang);
+                localStorage.setItem('language', newLang);
+                
+                debugLog(`语言已切换到: ${newLang}`, 'success');
+            } else {
+                debugLog('语言切换功能测试失败: setupLanguageToggle 函数不存在', 'error');
+            }
+            
+            updateSystemStatus();
+        }
+        
+        // 测试权限状态
+        function testPermissionStatus() {
+            debugLog('测试权限状态功能...');
+            
+            if (typeof showPermissionStatus === 'function') {
+                showPermissionStatus();
+                debugLog('权限状态功能测试成功', 'success');
+            } else {
+                debugLog('权限状态功能测试失败: showPermissionStatus 函数不存在', 'error');
+            }
+            
+            updateSystemStatus();
+        }
+        
+        // 模拟管理员登录
+        function testAdminLogin() {
+            debugLog('模拟管理员登录...');
+            
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('adminUsername', 'admin');
+            
+            if (typeof showPermissionStatus === 'function') {
+                showPermissionStatus();
+            }
+            
+            if (typeof setupAdminFeatures === 'function') {
+                setupAdminFeatures();
+            }
+            
+            debugLog('管理员登录模拟完成', 'success');
+            updateSystemStatus();
+        }
+        
+        // 模拟管理员登出
+        function testAdminLogout() {
+            debugLog('模拟管理员登出...');
+            
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('adminUsername');
+            
+            if (typeof showPermissionStatus === 'function') {
+                showPermissionStatus();
+            }
+            
+            if (typeof setupAdminFeatures === 'function') {
+                setupAdminFeatures();
+            }
+            
+            debugLog('管理员登出模拟完成', 'success');
+            updateSystemStatus();
+        }
+        
+        // 清除所有数据
+        function clearAllData() {
+            if (confirm('确定要清除所有本地数据吗？这将重置所有设置。')) {
+                debugLog('清除所有本地数据...', 'warning');
+                localStorage.clear();
+                
+                if (typeof showPermissionStatus === 'function') {
+                    showPermissionStatus();
+                }
+                
+                if (typeof setupAdminFeatures === 'function') {
+                    setupAdminFeatures();
+                }
+                
+                debugLog('所有数据已清除', 'success');
+                updateSystemStatus();
+            }
+        }
+        
+        // 刷新页面
+        function refreshPage() {
+            debugLog('刷新页面...');
+            window.location.reload();
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            debugLog('DOM 加载完成，初始化调试工具');
+            
+            // 等待一段时间确保所有脚本加载完成
+            setTimeout(() => {
+                updateSystemStatus();
+                
+                // 测试核心功能是否存在
+                const coreFunctions = [
+                    'setupLanguageToggle',
+                    'setLanguage',
+                    'checkAdminLogin',
+                    'showPermissionStatus',
+                    'setupAdminFeatures'
+                ];
+                
+                coreFunctions.forEach(funcName => {
+                    const exists = typeof window[funcName] === 'function';
+                    debugLog(`${funcName}: ${exists ? '存在' : '不存在'}`, exists ? 'success' : 'error');
+                });
+                
+                debugLog('调试工具初始化完成', 'success');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

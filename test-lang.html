@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>語言切換測試 - 香港熱帶氣旋及天氣分析中心</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide 圖標庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.544.0/dist/umd/lucide.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen">
+    <div class="container mx-auto px-4 py-12 text-center">
+        <h1 class="text-3xl font-bold mb-8">
+            <span data-lang="zh">語言切換功能測試</span>
+            <span data-lang="en" class="hidden">Language Toggle Test</span>
+        </h1>
+        
+        <div class="bg-white rounded-xl shadow-lg p-8 max-w-md mx-auto">
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4">
+                    <span data-lang="zh">當前語言</span>
+                    <span data-lang="en" class="hidden">Current Language</span>
+                </h2>
+                <p class="text-2xl font-bold text-primary" id="current-lang">繁體中文</p>
+            </div>
+            
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4">
+                    <span data-lang="zh">測試文本</span>
+                    <span data-lang="en" class="hidden">Test Text</span>
+                </h2>
+                <p class="text-lg">
+                    <span data-lang="zh">這是繁體中文文本，測試語言切換功能是否正常工作。</span>
+                    <span data-lang="en" class="hidden">This is English text to test if the language toggle function works properly.</span>
+                </p>
+            </div>
+            
+            <button id="lang-toggle" class="bg-primary text-white py-2 px-6 rounded-lg hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:outline-none transition-colors">
+                <span data-lang="zh">切換到 English</span>
+                <span data-lang="en" class="hidden">Switch to 中文</span>
+            </button>
+        </div>
+        
+        <div class="mt-8">
+            <a href="index.html" class="text-primary hover:text-primary/80 font-medium">
+                <span data-lang="zh">返回首頁</span>
+                <span data-lang="en" class="hidden">Back to Home</span>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // 語言切換功能
+        function setupLanguageToggle() {
+            const langToggle = document.getElementById('lang-toggle');
+            const currentLangElement = document.getElementById('current-lang');
+            
+            // 檢查本地存儲中的語言設置
+            const savedLang = localStorage.getItem('language') || 'zh';
+            setLanguage(savedLang);
+            
+            // 語言切換事件
+            function toggleLanguage() {
+                const currentLang = document.documentElement.lang;
+                const newLang = currentLang === 'zh' ? 'en' : 'zh';
+                
+                setLanguage(newLang);
+                localStorage.setItem('language', newLang);
+            }
+            
+            if (langToggle) {
+                langToggle.addEventListener('click', toggleLanguage);
+            }
+            
+            // 設置當前語言顯示
+            function setCurrentLangDisplay(lang) {
+                if (currentLangElement) {
+                    currentLangElement.textContent = lang === 'zh' ? '繁體中文' : 'English';
+                }
+            }
+            
+            // 設置頁面語言
+            function setLanguage(lang) {
+                document.documentElement.lang = lang;
+                
+                // 顯示對應語言的元素
+                document.querySelectorAll('[data-lang]').forEach(el => {
+                    if (el.getAttribute('data-lang') === lang) {
+                        el.classList.remove('hidden');
+                    } else {
+                        el.classList.add('hidden');
+                    }
+                });
+                
+                // 更新當前語言顯示
+                setCurrentLangDisplay(lang);
+                
+                // 更新頁面標題
+                if (lang === 'en') {
+                    document.title = 'Language Toggle Test - HKTCWAC';
+                } else {
+                    document.title = '語言切換測試 - 香港熱帶氣旋及天氣分析中心';
+                }
+            }
+        }
+        
+        // 頁面加載完成後初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            setupLanguageToggle();
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
